@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:alpine AS builder
 
 RUN apk add --no-cache gcc musl-dev
 
@@ -13,7 +13,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /app/vpn-radius ./main
 
 FROM alpine:latest
 
-RUN apk add --no-cache ca-certificates sqlite-libs
+RUN apk add --no-cache ca-certificates sqlite-libs wget
 
 COPY --from=builder /app/vpn-radius /usr/local/bin/vpn-radius
 COPY --from=builder /app/web /app/web

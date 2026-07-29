@@ -63,53 +63,6 @@ func (d *Database) Close() error {
 	return d.db.Close()
 }
 
-func (d *Database) RunMigrations() error {
-	migrations := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT UNIQUE NOT NULL,
-			password_hash TEXT NOT NULL,
-			is_active BOOLEAN DEFAULT 1
-		)`,
-		`CREATE TABLE IF NOT EXISTS sessions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL,
-			framed_ip TEXT,
-			session_id TEXT UNIQUE,
-			start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			end_time DATETIME,
-			input_octets INTEGER DEFAULT 0,
-			output_octets INTEGER DEFAULT 0,
-			FOREIGN KEY (username) REFERENCES users(username)
-		)`,
-		`CREATE TABLE IF NOT EXISTS radius_logs (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT,
-			request_type TEXT,
-			result TEXT,
-			client_ip TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
-			value TEXT,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_sessions_username ON sessions(username)`,
-		`CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_radius_logs_username ON radius_logs(username)`,
-		`CREATE INDEX IF NOT EXISTS idx_radius_logs_timestamp ON radius_logs(timestamp)`,
-	}
-
-	for _, m := range migrations {
-		if _, err := d.db.Exec(m); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (d *Database) GetUserByUsername(username string) (*User, error) {
 	var user User
 	query := `SELECT id, username, password_hash, is_active

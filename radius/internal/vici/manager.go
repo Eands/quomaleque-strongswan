@@ -3,16 +3,24 @@ package vici
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/strongswan/govici/vici"
 )
+
+const defaultViciSocket = "/var/run/charon.vici"
 
 type ViciManager struct {
 	session *vici.Session
 }
 
 func NewViciManager() (*ViciManager, error) {
-	session, err := vici.NewSession()
+	socketPath := os.Getenv("VICI_SOCKET")
+	if socketPath == "" {
+		socketPath = defaultViciSocket
+	}
+
+	session, err := vici.NewSession(vici.WithSocketPath(socketPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create VICI session: %w", err)
 	}

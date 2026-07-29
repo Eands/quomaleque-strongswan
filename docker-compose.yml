@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   strongswan:
     image: jesusdf/docker-strongswan:latest
@@ -10,6 +8,7 @@ services:
     volumes:
       - ./strongswan/config/strongswan.conf:/etc/strongswan.conf:ro
       - ./strongswan/config/swanctl:/etc/swanctl:ro
+      - ./vici:/tmp/vici
     restart: unless-stopped
 
   radius:
@@ -18,10 +17,20 @@ services:
       dockerfile: Dockerfile
     container_name: vpn-radius
     network_mode: host
+    depends_on:
+      strongswan:
+        condition: service_started
     environment:
       - DB_PATH=/data/users.db
       - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
+      - VICI_SOCKET=/tmp/vici/charon.vici
     volumes:
       - ./data:/data
-      - /var/run/charon.vici:/var/run/charon.vici
+      - ./vici:/tmp/vici
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
