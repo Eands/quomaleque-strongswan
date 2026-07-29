@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - VPN Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a>
+        <a href="/users">Users</a>
+        <a href="/vpn">VPN</a>
+        <a href="/sessions">Sessions</a>
+        <a href="/logs">Logs</a>
+        <a href="/stats">Stats</a>
+        <a href="/settings">Settings</a>
+        <a href="/logout">Logout</a>
+    </nav>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <p>{{.total_users}}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Active Sessions</h3>
+                <p>{{.active_sessions}}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Sessions</h3>
+                <p>{{.total_sessions}}</p>
+            </div>
+        </div>
+        {{if .vpn_stats}}
+        <h2>VPN Statistics</h2>
+        <pre>{{printf "%v" .vpn_stats}}</pre>
+        {{end}}
+    </div>
+</body>
+</html>

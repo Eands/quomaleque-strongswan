@@ -1,0 +1,27 @@
+FROM golang:1.23-alpine AS builder
+
+RUN apk add --no-cache gcc musl-dev
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /app/vpn-radius ./main/
+
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates sqlite-libs
+
+COPY --from=builder /app/vpn-radius /usr/local/bin/vpn-radius
+COPY --from=builder /app/web /app/web
+
+RUN mkdir -p /data
+
+EXPOSE 8080
+EXPOSE 1812/udp
+EXPOSE 1813/udp
+
+ENTRYPOINT ["/usr/local/bin/vpn-radius"]

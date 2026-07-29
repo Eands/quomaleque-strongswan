@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats - VPN Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a>
+        <a href="/users">Users</a>
+        <a href="/vpn">VPN</a>
+        <a href="/sessions">Sessions</a>
+        <a href="/logs">Logs</a>
+        <a href="/stats">Stats</a>
+        <a href="/settings">Settings</a>
+        <a href="/logout">Logout</a>
+    </nav>
+    <div class="container">
+        <h1>Statistics</h1>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <p>{{.user_count}}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Active Sessions</h3>
+                <p>{{.active_count}}</p>
+            </div>
+        </div>
+        {{if .version}}
+            <h2>StrongSwan Version</h2>
+            <pre>{{printf "%v" .version}}</pre>
+        {{end}}
+        {{if .vici_stats}}
+            <h2>VICI Statistics</h2>
+            <pre>{{printf "%v" .vici_stats}}</pre>
+        {{end}}
+    </div>
+</body>
+</html>

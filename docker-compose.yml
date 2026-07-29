@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  strongswan:
+    image: jesusdf/docker-strongswan:latest
+    container_name: strongswan
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
+    volumes:
+      - ./strongswan/config/strongswan.conf:/etc/strongswan.conf:ro
+      - ./strongswan/config/swanctl:/etc/swanctl:ro
+    restart: unless-stopped
+
+  radius:
+    build:
+      context: ./radius
+      dockerfile: Dockerfile
+    container_name: vpn-radius
+    network_mode: host
+    environment:
+      - DB_PATH=/data/users.db
+      - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
+    volumes:
+      - ./data:/data
+      - /var/run/charon.vici:/var/run/charon.vici
+    restart: unless-stopped
