@@ -1,0 +1,5 @@
+data/
+certbot/data/
+certbot/www/
+/.vscode/
+/.idea/
