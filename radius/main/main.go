@@ -24,7 +24,12 @@ import (
 )
 
 func main() {
-	database, err := db.NewDatabase("./data/users.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./data/users.db"
+	}
+
+	database, err := db.NewDatabase(dbPath)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -32,6 +37,10 @@ func main() {
 
 	if err := database.RunMigrations(); err != nil {
 		log.Fatal("Failed to run migrations:", err)
+	}
+
+	if err := database.Seed(); err != nil {
+		log.Printf("Warning: seed failed: %v", err)
 	}
 
 	viciManager, err := vici.NewViciManager()
@@ -181,6 +190,16 @@ func handleAccessRequest(w radius.ResponseWriter, r *radius.Request, database *d
 		w.Write(r.Response(radius.CodeAccessReject))
 		database.InsertRadiusLog(username, "Access-Request", "Reject", clientIP(r.RemoteAddr))
 		return
+	}
+
+	if user.MaxConnections > 0 {
+		activeCount, _ := database.GetActiveSessionCountByUsername(username)
+		if activeCount >= user.MaxConnections {
+			log.Printf("RADIUS: limit reached for %s (%d/%d)", username, activeCount, user.MaxConnections)
+			w.Write(r.Response(radius.CodeAccessReject))
+			database.InsertRadiusLog(username, "Access-Request", "Reject", clientIP(r.RemoteAddr))
+			return
+		}
 	}
 
 	log.Printf("RADIUS: auth success for %s", username)

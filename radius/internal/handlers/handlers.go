@@ -104,13 +104,18 @@ func (h *Handlers) CreateUserPage(c *gin.Context) {
 
 func (h *Handlers) CreateUser(c *gin.Context) {
 	var req struct {
-		Username string `form:"username" binding:"required"`
-		Password string `form:"password" binding:"required"`
+		Username       string `form:"username" binding:"required"`
+		Password       string `form:"password" binding:"required"`
+		MaxConnections int    `form:"max_connections"`
 	}
 
 	if err := c.ShouldBind(&req); err != nil {
 		c.HTML(http.StatusBadRequest, "user_create.html", gin.H{"error": err.Error()})
 		return
+	}
+
+	if req.MaxConnections < 0 {
+		req.MaxConnections = 0
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -119,7 +124,7 @@ func (h *Handlers) CreateUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.db.CreateUser(req.Username, string(hash)); err != nil {
+	if err := h.db.CreateUser(req.Username, string(hash), req.MaxConnections); err != nil {
 		c.HTML(http.StatusInternalServerError, "user_create.html", gin.H{"error": err.Error()})
 		return
 	}
@@ -151,13 +156,18 @@ func (h *Handlers) UpdateUser(c *gin.Context) {
 	}
 
 	var req struct {
-		Username string `form:"username" binding:"required"`
-		Password string `form:"password"`
+		Username       string `form:"username" binding:"required"`
+		Password       string `form:"password"`
+		MaxConnections int    `form:"max_connections"`
 	}
 
 	if err := c.ShouldBind(&req); err != nil {
 		c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": err.Error()})
 		return
+	}
+
+	if req.MaxConnections < 0 {
+		req.MaxConnections = 0
 	}
 
 	user, err := h.db.GetUserByID(id)
@@ -176,7 +186,7 @@ func (h *Handlers) UpdateUser(c *gin.Context) {
 		passwordHash = string(hash)
 	}
 
-	if err := h.db.UpdateUser(id, req.Username, passwordHash); err != nil {
+	if err := h.db.UpdateUser(id, req.Username, passwordHash, req.MaxConnections); err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": err.Error()})
 		return
 	}

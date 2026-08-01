@@ -2,16 +2,19 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID           int
-	Username     string
-	PasswordHash string
-	IsActive     bool
+	ID             int
+	Username       string
+	PasswordHash   string
+	IsActive       bool
+	MaxConnections int
 }
 
 type Session struct {
@@ -63,12 +66,27 @@ func (d *Database) Close() error {
 	return d.db.Close()
 }
 
+func (d *Database) Seed() error {
+	var count int
+	d.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if count > 0 {
+		return nil
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("seed: %w", err)
+	}
+
+	return d.CreateUser("admin", string(hash), 0)
+}
+
 func (d *Database) GetUserByUsername(username string) (*User, error) {
 	var user User
-	query := `SELECT id, username, password_hash, is_active
+	query := `SELECT id, username, password_hash, is_active, max_connections
               FROM users WHERE username = ?`
 	err := d.db.QueryRow(query, username).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive,
+		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive, &user.MaxConnections,
 	)
 	if err != nil {
 		return nil, err
@@ -78,10 +96,10 @@ func (d *Database) GetUserByUsername(username string) (*User, error) {
 
 func (d *Database) GetUserByID(id int) (*User, error) {
 	var user User
-	query := `SELECT id, username, password_hash, is_active
+	query := `SELECT id, username, password_hash, is_active, max_connections
               FROM users WHERE id = ?`
 	err := d.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive,
+		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive, &user.MaxConnections,
 	)
 	if err != nil {
 		return nil, err
@@ -89,16 +107,16 @@ func (d *Database) GetUserByID(id int) (*User, error) {
 	return &user, nil
 }
 
-func (d *Database) CreateUser(username, passwordHash string) error {
-	query := `INSERT INTO users (username, password_hash)
-              VALUES (?, ?)`
-	_, err := d.db.Exec(query, username, passwordHash)
+func (d *Database) CreateUser(username, passwordHash string, maxConnections int) error {
+	query := `INSERT INTO users (username, password_hash, max_connections)
+              VALUES (?, ?, ?)`
+	_, err := d.db.Exec(query, username, passwordHash, maxConnections)
 	return err
 }
 
-func (d *Database) UpdateUser(id int, username, passwordHash string) error {
-	query := `UPDATE users SET username = ?, password_hash = ? WHERE id = ?`
-	_, err := d.db.Exec(query, username, passwordHash, id)
+func (d *Database) UpdateUser(id int, username, passwordHash string, maxConnections int) error {
+	query := `UPDATE users SET username = ?, password_hash = ?, max_connections = ? WHERE id = ?`
+	_, err := d.db.Exec(query, username, passwordHash, maxConnections, id)
 	return err
 }
 
@@ -116,7 +134,7 @@ func (d *Database) ToggleUserActive(id int) error {
 
 func (d *Database) ListUsers() ([]User, error) {
 	rows, err := d.db.Query(
-		`SELECT id, username, password_hash, is_active
+		`SELECT id, username, password_hash, is_active, max_connections
 		FROM users ORDER BY id`)
 	if err != nil {
 		return nil, err
@@ -126,7 +144,7 @@ func (d *Database) ListUsers() ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.IsActive)
+		err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.IsActive, &u.MaxConnections)
 		if err != nil {
 			return nil, err
 		}
@@ -138,6 +156,14 @@ func (d *Database) ListUsers() ([]User, error) {
 func (d *Database) CountUsers() (int, error) {
 	var count int
 	err := d.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	return count, err
+}
+
+func (d *Database) GetActiveSessionCountByUsername(username string) (int, error) {
+	var count int
+	err := d.db.QueryRow(
+		"SELECT COUNT(*) FROM sessions WHERE username = ? AND end_time IS NULL",
+		username).Scan(&count)
 	return count, err
 }
 

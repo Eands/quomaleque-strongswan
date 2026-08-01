@@ -1,2 +1,3 @@
 data/
-vici/
+certbot/data/
+certbot/www/

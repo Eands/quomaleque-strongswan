@@ -13,6 +13,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /app/vpn-radius ./main
 
 FROM alpine:latest
 
+WORKDIR /app
+
 RUN apk add --no-cache ca-certificates sqlite-libs wget
 
 COPY --from=builder /app/vpn-radius /usr/local/bin/vpn-radius

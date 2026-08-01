@@ -26,6 +26,7 @@
                     <th>ID</th>
                     <th>Username</th>
                     <th>Status</th>
+                    <th>Max Conn</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -35,6 +36,7 @@
                     <td>{{.ID}}</td>
                     <td>{{.Username}}</td>
                     <td>{{if .IsActive}}Active{{else}}Disabled{{end}}</td>
+                    <td>{{if .MaxConnections}}{{.MaxConnections}}{{else}}Unlimited{{end}}</td>
                     <td>
                         <a href="/users/{{.ID}}/edit">Edit</a>
                         <form method="POST" action="/users/{{.ID}}/toggle" style="display:inline">
