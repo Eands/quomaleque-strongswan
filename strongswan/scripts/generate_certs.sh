@@ -9,8 +9,9 @@ SERVER_CN=quomaleque.ru
 SERVER_SAN=quomaleque.ru
 CLIENT_CN="quomaleque.ru"
 
-CONFIG_DIR="$PWD/config/swanctl"
-PKI="docker run --rm -v $CONFIG_DIR:/etc/swanctl jesusdf/docker-strongswan pki"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG_DIR="$SCRIPT_DIR/../config/swanctl"
+PKI="docker run --rm --entrypoint pki -v $CONFIG_DIR:/etc/swanctl jesusdf/docker-strongswan"
 
 mkdir -p "$CONFIG_DIR/x509ca" \
          "$CONFIG_DIR/x509" \
