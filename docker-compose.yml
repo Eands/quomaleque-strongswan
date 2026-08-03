@@ -9,10 +9,7 @@ services:
     container_name: strongswan
     cap_add:
       - NET_ADMIN
-    ports:
-      - "8080:8080"
-      - "1812:1812/udp"
-      - "1813:1813/udp"
+    network_mode: host
     volumes:
       - vici_socket:/var/run
     restart: unless-stopped
