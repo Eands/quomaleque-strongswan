@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     iptables \
     && rm -rf /var/lib/apt/lists/*
 
+RUN echo "hosts: files dns" > /etc/nsswitch.conf
+
 RUN mkdir -p /etc/swanctl/x509 \
     /etc/swanctl/x509ca \
     /etc/swanctl/private
