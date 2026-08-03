@@ -12,6 +12,7 @@ IKEv2 VPN на базе StrongSwan, Go RADIUS-сервера и веб-инте�
 ├── certbot/
 │   └── deploy.sh                # Копирование LE-сертификатов → swanctl
 ├── strongswan/
+│   ├── Dockerfile                # Свой образ (Ubuntu + strongswan)
 │   ├── config/
 │   │   ├── strongswan.conf      # charon: VICI, EAP-RADIUS
 │   │   └── swanctl/
@@ -35,11 +36,14 @@ IKEv2 VPN на базе StrongSwan, Go RADIUS-сервера и веб-инте�
 ### Локально (самоподписанные сертификаты)
 
 ```bash
+# Установить strongswan-pki (нужен для генерации сертификатов)
+sudo apt-get install -y strongswan-pki openssl
+
 ./strongswan/scripts/generate_certs.sh
 docker compose up -d --build
 ```
 
-Веб-интерфейс: `http://localhost:8080/login`
+Веб-интерфейс: `http://<IP_VM>:8080/login`
 Логин: `admin`, пароль: `admin` (создаётся автоматически при первом запуске)
 
 ### Продакшен (Let's Encrypt + HTTPS)

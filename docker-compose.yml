@@ -3,14 +3,14 @@ volumes:
 
 services:
   strongswan:
-    image: jesusdf/docker-strongswan:latest
+    build:
+      context: ./strongswan
+      dockerfile: Dockerfile
     container_name: strongswan
     cap_add:
       - NET_ADMIN
     network_mode: host
     volumes:
-      - ./strongswan/config/strongswan.conf:/etc/strongswan.conf:ro
-      - ./strongswan/config/swanctl:/etc/swanctl
       - vici_socket:/var/run
     restart: unless-stopped
 
