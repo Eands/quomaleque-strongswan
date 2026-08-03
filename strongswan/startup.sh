@@ -2,6 +2,8 @@
 
 set -e
 
+rm -f /var/run/charon.vici /var/run/charon.pid
+
 ipsec start
 
 while [ ! -S /var/run/charon.vici ]; do
