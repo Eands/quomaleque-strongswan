@@ -3,7 +3,9 @@ volumes:
 
 services:
   strongswan:
-    image: jesusdf/docker-strongswan:latest
+    build:
+      context: ./strongswan
+      dockerfile: Dockerfile
     container_name: strongswan
     cap_add:
       - NET_ADMIN
