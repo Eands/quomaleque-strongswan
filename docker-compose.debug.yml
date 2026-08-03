@@ -1,0 +1,20 @@
+services:
+  radius:
+    build:
+      target: debug
+    command: >
+      dlv exec /app/vpn-radius
+        --headless --listen=:2345 --api-version=2
+        --accept-multiclient --continue
+    ports:
+      - "2345:2345"
+      - "8080:8080"
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

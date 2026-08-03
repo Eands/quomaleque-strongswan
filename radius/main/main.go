@@ -53,7 +53,7 @@ func main() {
 
 	radiusSecret := os.Getenv("RADIUS_SECRET")
 	if radiusSecret == "" {
-		radiusSecret = "HpE98gAFA4OaJaHYU46M"
+		log.Fatal("Cannot find env RADIUS_SECRET")
 	}
 	secret := []byte(radiusSecret)
 
