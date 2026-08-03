@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
     strongswan \
     strongswan-swanctl \
     libcharon-extra-plugins \
+    libstrongswan-extra-plugins \
     iptables \
     && rm -rf /var/lib/apt/lists/*
 
