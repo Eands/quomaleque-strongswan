@@ -14,7 +14,10 @@ RUN mkdir -p /etc/swanctl/x509 \
 
 COPY config/strongswan.conf /etc/strongswan.conf
 COPY config/swanctl/ /etc/swanctl/
+COPY startup.sh /
+
+RUN chmod +x /startup.sh
 
 EXPOSE 500/udp 4500/udp
 
-CMD sh -c 'swanctl --load-all && ipsec start --nofork'
+ENTRYPOINT ["/startup.sh"]
