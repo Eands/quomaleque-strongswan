@@ -36,3 +36,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  radius-debug:
+    profiles: [debug]
+    build:
+      context: ./radius
+      dockerfile: Dockerfile
+      target: debug
+    container_name: vpn-radius-debug
+    network_mode: host
+    depends_on:
+      strongswan:
+        condition: service_started
+    environment:
+      - DB_PATH=/data/users.db
+      - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
+    volumes:
+      - ./data:/data
+      - vici_socket:/var/run
+    command: >
+      dlv exec /app/vpn-radius
+        --headless --listen=:2345 --api-version=2
+        --accept-multiclient --continue
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

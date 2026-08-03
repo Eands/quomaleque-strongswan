@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -26,6 +27,7 @@ func (h *Handlers) AuthMiddleware() gin.HandlerFunc {
 		session := sessions.Default(c)
 		userID := session.Get("user_id")
 		if userID == nil {
+			log.Printf("AuthMiddleware: no session, redirecting to /login, path=%s", c.Request.URL.Path)
 			c.Redirect(http.StatusFound, "/login")
 			c.Abort()
 			return
@@ -63,7 +65,12 @@ func (h *Handlers) Login(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_id", user.ID)
 	session.Set("username", user.Username)
-	session.Save()
+	if err := session.Save(); err != nil {
+		log.Printf("Login: failed to save session for %s: %v", user.Username, err)
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Session error"})
+		return
+	}
+	log.Printf("Login: session saved for %s (id=%d)", user.Username, user.ID)
 
 	c.Redirect(http.StatusFound, "/")
 }
@@ -71,20 +78,24 @@ func (h *Handlers) Login(c *gin.Context) {
 func (h *Handlers) Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	session.Save()
+	if err := session.Save(); err != nil {
+		log.Printf("Login: failed to clear session %s", err)
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Session error"})
+		return
+	}
 	c.Redirect(http.StatusFound, "/login")
 }
 
 func (h *Handlers) Dashboard(c *gin.Context) {
 	users, _ := h.db.ListUsers()
-	sessions, _ := h.db.ListSessions()
+	listSessions, _ := h.db.ListSessions()
 	activeCount, _ := h.db.GetActiveSessionCount()
 	stats, _ := h.vici.GetStats()
 
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"total_users":     len(users),
 		"active_sessions": activeCount,
-		"total_sessions":  len(sessions),
+		"total_sessions":  len(listSessions),
 		"vpn_stats":       stats,
 	})
 }
@@ -297,12 +308,12 @@ func (h *Handlers) TerminateConnection(c *gin.Context) {
 }
 
 func (h *Handlers) ListSessions(c *gin.Context) {
-	sessions, err := h.db.ListSessions()
+	listSessions, err := h.db.ListSessions()
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": err.Error()})
 		return
 	}
-	c.HTML(http.StatusOK, "sessions.html", gin.H{"sessions": sessions})
+	c.HTML(http.StatusOK, "sessions.html", gin.H{"sessions": listSessions})
 }
 
 func (h *Handlers) ListLogs(c *gin.Context) {
@@ -321,10 +332,10 @@ func (h *Handlers) Stats(c *gin.Context) {
 	version, _ := h.vici.GetVersion()
 
 	c.HTML(http.StatusOK, "stats.html", gin.H{
-		"user_count":    userCount,
-		"active_count":  activeCount,
-		"vici_stats":    viciStats,
-		"version":       version,
+		"user_count":   userCount,
+		"active_count": activeCount,
+		"vici_stats":   viciStats,
+		"version":      version,
 	})
 }
 

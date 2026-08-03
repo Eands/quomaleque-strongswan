@@ -43,10 +43,7 @@ sudo apt-get install -y strongswan-pki openssl
 docker compose up -d --build
 ```
 
-Веб-интерфейс: `http://<IP_VM>:8080/login`
-Логин: `admin`, пароль: `admin` (создаётся автоматически при первом запуске)
-
-### Продакшен (Let's Encrypt + HTTPS)
+### Let's Encrypt + HTTPS (not tested yet)
 
 ```bash
 # 1. Получить сертификат
@@ -59,27 +56,10 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Веб-интерфейс: `https://vpn.example.com`
-
-### Настройка VPN-клиента
-
-1. Импортировать CA-сертификат на устройство:
-   - **Локально:** `strongswan/config/swanctl/clientCert.p12`
-   - **Продакшен:** сертификат доверенный автоматически (Let's Encrypt)
-
-2. Создать IKEv2-подключение:
-   - Сервер: домен или IP сервера
-   - Remote ID: домен сервера
-   - Аутентификация: EAP (логин / пароль из веб-интерфейса)
-
-### Отладка
+### Debug
 
 ```bash
-docker compose logs -f radius strongswan
-
-docker exec vpn-radius sqlite3 /data/users.db "SELECT * FROM users;"
-docker exec vpn-radius sqlite3 /data/users.db "SELECT * FROM radius_logs ORDER BY timestamp DESC LIMIT 10;"
-docker exec vpn-radius sqlite3 /data/users.db "SELECT * FROM schema_migrations;"
-
-docker exec strongswan swanctl --list-sas
+docker compose --profile debug up -d --build radius-debug
 ```
+
+### TODO
