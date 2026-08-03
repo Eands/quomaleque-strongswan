@@ -8,9 +8,6 @@ services:
     cap_add:
       - NET_ADMIN
     network_mode: host
-    environment:
-      - RADIUS_ADDR=${RADIUS_ADDR:-172.17.0.1:1812}
-      - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
     volumes:
       - ./strongswan/config/strongswan.conf:/etc/strongswan.conf:ro
       - ./strongswan/config/swanctl:/etc/swanctl
