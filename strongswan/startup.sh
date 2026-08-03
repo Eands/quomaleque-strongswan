@@ -2,7 +2,7 @@
 
 set -e
 
-rm -f /var/run/charon.vici /var/run/charon.pid
+rm -f /var/run/charon.vici
 
 ipsec start
 
@@ -12,4 +12,4 @@ done
 
 swanctl --load-all
 
-exec tail -f /dev/null
+exec tail -f /var/log/charon.log
