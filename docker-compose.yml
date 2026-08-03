@@ -3,9 +3,7 @@ volumes:
 
 services:
   strongswan:
-    build:
-      context: ./strongswan
-      dockerfile: Dockerfile
+    image: jesusdf/docker-strongswan:latest
     container_name: strongswan
     cap_add:
       - NET_ADMIN
@@ -21,10 +19,7 @@ services:
       context: ./radius
       dockerfile: Dockerfile
     container_name: vpn-radius
-    ports:
-      - "8080:8080"
-      - "1812:1812/udp"
-      - "1813:1813/udp"
+    network_mode: host
     depends_on:
       strongswan:
         condition: service_started
