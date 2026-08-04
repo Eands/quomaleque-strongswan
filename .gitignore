@@ -1,5 +1,5 @@
-data/
-certbot/data/
+toughradius/data/
+certbot/etc/
 certbot/www/
-/.vscode/
-/.idea/
+.DS_Store
+.idea/

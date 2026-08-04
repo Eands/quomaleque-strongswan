@@ -2,14 +2,11 @@
 
 set -e
 
-rm -f /var/run/charon.vici
+echo "hosts: files dns" > /etc/nsswitch.conf
 
 ipsec start
 
-while [ ! -S /var/run/charon.vici ]; do
-    sleep 1
-done
-
+sleep 2
 swanctl --load-all
 
 exec tail -f /var/log/charon.log
