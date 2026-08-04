@@ -53,7 +53,7 @@ func (h *Handlers) Login(c *gin.Context) {
 
 	user, err := h.db.GetUserByUsername(req.Username)
 	if err != nil || !user.IsActive {
-		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid credentials"})
+		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "User is not active"})
 		return
 	}
 
@@ -129,13 +129,7 @@ func (h *Handlers) CreateUser(c *gin.Context) {
 		req.MaxConnections = 0
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.HTML(http.StatusInternalServerError, "user_create.html", gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := h.db.CreateUser(req.Username, string(hash), req.MaxConnections); err != nil {
+	if err := h.db.CreateUser(req.Username, req.Password, req.MaxConnections); err != nil {
 		c.HTML(http.StatusInternalServerError, "user_create.html", gin.H{"error": err.Error()})
 		return
 	}
@@ -181,23 +175,7 @@ func (h *Handlers) UpdateUser(c *gin.Context) {
 		req.MaxConnections = 0
 	}
 
-	user, err := h.db.GetUserByID(id)
-	if err != nil {
-		c.HTML(http.StatusNotFound, "error.html", gin.H{"error": "User not found"})
-		return
-	}
-
-	passwordHash := user.PasswordHash
-	if req.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": err.Error()})
-			return
-		}
-		passwordHash = string(hash)
-	}
-
-	if err := h.db.UpdateUser(id, req.Username, passwordHash, req.MaxConnections); err != nil {
+	if err := h.db.UpdateUser(id, req.Username, req.Password, req.MaxConnections); err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": err.Error()})
 		return
 	}

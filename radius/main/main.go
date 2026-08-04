@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,8 +14,10 @@ import (
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2865"
 	"layeh.com/radius/rfc2866"
+	"layeh.com/radius/rfc2869"
 
 	"vpn-radius/internal/db"
+	"vpn-radius/internal/eap"
 	"vpn-radius/internal/handlers"
 	"vpn-radius/internal/vici"
 
@@ -90,7 +93,15 @@ func main() {
 
 	router := gin.Default()
 
-	store := cookie.NewStore([]byte("vpn-radius-session-secret-key"))
+	store := cookie.NewStore([]byte("zi4BnL1T3I/EXPAWcsQ55tdIH3KnSdCDQf5r+qAmpSnwryoIG61VO/F/JD+7w2OeUFcsYEMAQ6VsOdAFjkBlMQ==")) //todo to env
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7, //7 дней
+		HttpOnly: true,
+		Secure:   false, //todo move to https
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	router.Use(sessions.Sessions("vpn_session", store))
 
 	router.Static("/static", "./web/static")
@@ -169,11 +180,11 @@ func clientIP(addr net.Addr) string {
 
 func handleAccessRequest(w radius.ResponseWriter, r *radius.Request, database *db.Database) {
 	username := rfc2865.UserName_GetString(r.Packet)
-	password := rfc2865.UserPassword_GetString(r.Packet)
+	clientIPStr := clientIP(r.RemoteAddr)
 
 	if username == "" {
 		w.Write(r.Response(radius.CodeAccessReject))
-		database.InsertRadiusLog("", "Access-Request", "Reject", clientIP(r.RemoteAddr))
+		database.InsertRadiusLog("", "Access-Request", "Reject", clientIPStr)
 		return
 	}
 
@@ -181,31 +192,102 @@ func handleAccessRequest(w radius.ResponseWriter, r *radius.Request, database *d
 	if err != nil || !user.IsActive {
 		log.Printf("RADIUS: auth failed for %s: %v", username, err)
 		w.Write(r.Response(radius.CodeAccessReject))
-		database.InsertRadiusLog(username, "Access-Request", "Reject", clientIP(r.RemoteAddr))
+		database.InsertRadiusLog(username, "Access-Request", "Reject", clientIPStr)
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		log.Printf("RADIUS: bad password for %s", username)
+	// Detect EAP vs PAP
+	method := eap.DetectMethod(r)
+	switch method {
+	case eap.AuthMethodMSCHAPv2:
+		handleEAP(w, r, database, user, clientIPStr)
+	case eap.AuthMethodPAP:
+		handlePAP(w, r, database, user, clientIPStr)
+	default:
 		w.Write(r.Response(radius.CodeAccessReject))
-		database.InsertRadiusLog(username, "Access-Request", "Reject", clientIP(r.RemoteAddr))
+		database.InsertRadiusLog(username, "Access-Request", "Reject", clientIPStr)
+	}
+}
+
+func handleEAP(w radius.ResponseWriter, r *radius.Request, database *db.Database, user *db.User, clientIPStr string) {
+	eapData := rfc2869.EAPMessage_Get(r.Packet)
+	stateToken := rfc2865.State_GetString(r.Packet)
+	code := byte(0)
+	if len(eapData) > 0 {
+		code = eapData[0]
+	}
+
+	switch {
+	case code == eapCodeResponse && len(stateToken) == 0:
+		// First round: EAP-Response/Identity → send Challenge
+		resp, token, err := eap.HandleIdentity(r, user.Username)
+		if err != nil {
+			log.Printf("RADIUS: EAP challenge failed for %s: %v", user.Username, err)
+			w.Write(r.Response(radius.CodeAccessReject))
+			database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
+			return
+		}
+		rfc2865.State_SetString(resp, token)
+		w.Write(resp)
+		log.Printf("RADIUS: EAP challenge sent for %s", user.Username)
+		database.InsertRadiusLog(user.Username, "Access-Request", "Challenge", clientIPStr)
+
+	case code == eapCodeResponse && len(stateToken) > 0:
+		// Second round: EAP-Response/MSCHAPv2 → verify
+		resp := eap.HandleResponse(r, stateToken, user.NTHash)
+		if resp.Code == radius.CodeAccessAccept {
+			if user.MaxConnections > 0 {
+				activeCount, _ := database.GetActiveSessionCountByUsername(user.Username)
+				if activeCount >= user.MaxConnections {
+					log.Printf("RADIUS: limit reached for %s (%d/%d)", user.Username, activeCount, user.MaxConnections)
+					w.Write(r.Response(radius.CodeAccessReject))
+					database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
+					return
+				}
+			}
+			log.Printf("RADIUS: EAP auth success for %s", user.Username)
+			database.InsertRadiusLog(user.Username, "Access-Request", "Accept", clientIPStr)
+		} else {
+			log.Printf("RADIUS: EAP auth failed for %s", user.Username)
+			database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
+		}
+		w.Write(resp)
+
+	default:
+		w.Write(r.Response(radius.CodeAccessReject))
+		database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
+	}
+}
+
+func handlePAP(w radius.ResponseWriter, r *radius.Request, database *db.Database, user *db.User, clientIPStr string) {
+	password := rfc2865.UserPassword_GetString(r.Packet)
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		log.Printf("RADIUS: bad password for %s", user.Username)
+		w.Write(r.Response(radius.CodeAccessReject))
+		database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
 		return
 	}
 
 	if user.MaxConnections > 0 {
-		activeCount, _ := database.GetActiveSessionCountByUsername(username)
+		activeCount, _ := database.GetActiveSessionCountByUsername(user.Username)
 		if activeCount >= user.MaxConnections {
-			log.Printf("RADIUS: limit reached for %s (%d/%d)", username, activeCount, user.MaxConnections)
+			log.Printf("RADIUS: limit reached for %s (%d/%d)", user.Username, activeCount, user.MaxConnections)
 			w.Write(r.Response(radius.CodeAccessReject))
-			database.InsertRadiusLog(username, "Access-Request", "Reject", clientIP(r.RemoteAddr))
+			database.InsertRadiusLog(user.Username, "Access-Request", "Reject", clientIPStr)
 			return
 		}
 	}
 
-	log.Printf("RADIUS: auth success for %s", username)
+	log.Printf("RADIUS: PAP auth success for %s", user.Username)
 	w.Write(r.Response(radius.CodeAccessAccept))
-	database.InsertRadiusLog(username, "Access-Request", "Accept", clientIP(r.RemoteAddr))
+	database.InsertRadiusLog(user.Username, "Access-Request", "Accept", clientIPStr)
 }
+
+// EAP constants for code detection
+const (
+	eapCodeResponse = 2
+)
 
 func handleAccountingRequest(w radius.ResponseWriter, r *radius.Request, database *db.Database) {
 	username := rfc2865.UserName_GetString(r.Packet)

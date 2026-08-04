@@ -2,17 +2,20 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/hex"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/md4"
+	"golang.org/x/text/encoding/unicode"
 )
 
 type User struct {
 	ID             int
 	Username       string
 	PasswordHash   string
+	NTHash         string
 	IsActive       bool
 	MaxConnections int
 }
@@ -66,27 +69,29 @@ func (d *Database) Close() error {
 	return d.db.Close()
 }
 
+func generateNTHash(password string) string {
+	encoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
+	utf16, _ := encoder.Bytes([]byte(password))
+	h := md4.New()
+	h.Write(utf16)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func (d *Database) Seed() error {
 	var count int
 	d.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
 	if count > 0 {
 		return nil
 	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("seed: %w", err)
-	}
-
-	return d.CreateUser("admin", string(hash), 0)
+	return d.CreateUser("admin", "admin", 0)
 }
 
 func (d *Database) GetUserByUsername(username string) (*User, error) {
 	var user User
-	query := `SELECT id, username, password_hash, is_active, max_connections
+	query := `SELECT id, username, password_hash, nt_hash, is_active, max_connections
               FROM users WHERE username = ?`
 	err := d.db.QueryRow(query, username).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive, &user.MaxConnections,
+		&user.ID, &user.Username, &user.PasswordHash, &user.NTHash, &user.IsActive, &user.MaxConnections,
 	)
 	if err != nil {
 		return nil, err
@@ -96,10 +101,10 @@ func (d *Database) GetUserByUsername(username string) (*User, error) {
 
 func (d *Database) GetUserByID(id int) (*User, error) {
 	var user User
-	query := `SELECT id, username, password_hash, is_active, max_connections
+	query := `SELECT id, username, password_hash, nt_hash, is_active, max_connections
               FROM users WHERE id = ?`
 	err := d.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.IsActive, &user.MaxConnections,
+		&user.ID, &user.Username, &user.PasswordHash, &user.NTHash, &user.IsActive, &user.MaxConnections,
 	)
 	if err != nil {
 		return nil, err
@@ -107,16 +112,31 @@ func (d *Database) GetUserByID(id int) (*User, error) {
 	return &user, nil
 }
 
-func (d *Database) CreateUser(username, passwordHash string, maxConnections int) error {
-	query := `INSERT INTO users (username, password_hash, max_connections)
-              VALUES (?, ?, ?)`
-	_, err := d.db.Exec(query, username, passwordHash, maxConnections)
+func (d *Database) CreateUser(username, password string, maxConnections int) error {
+	bcryptHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	ntHash := generateNTHash(password)
+	query := `INSERT INTO users (username, password_hash, nt_hash, max_connections)
+              VALUES (?, ?, ?, ?)`
+	_, err = d.db.Exec(query, username, string(bcryptHash), ntHash, maxConnections)
 	return err
 }
 
-func (d *Database) UpdateUser(id int, username, passwordHash string, maxConnections int) error {
-	query := `UPDATE users SET username = ?, password_hash = ?, max_connections = ? WHERE id = ?`
-	_, err := d.db.Exec(query, username, passwordHash, maxConnections, id)
+func (d *Database) UpdateUser(id int, username, password string, maxConnections int) error {
+	if password == "" {
+		query := `UPDATE users SET username = ?, max_connections = ? WHERE id = ?`
+		_, err := d.db.Exec(query, username, maxConnections, id)
+		return err
+	}
+	bcryptHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	ntHash := generateNTHash(password)
+	query := `UPDATE users SET username = ?, password_hash = ?, nt_hash = ?, max_connections = ? WHERE id = ?`
+	_, err = d.db.Exec(query, username, string(bcryptHash), ntHash, maxConnections, id)
 	return err
 }
 
@@ -134,7 +154,7 @@ func (d *Database) ToggleUserActive(id int) error {
 
 func (d *Database) ListUsers() ([]User, error) {
 	rows, err := d.db.Query(
-		`SELECT id, username, password_hash, is_active, max_connections
+		`SELECT id, username, password_hash, nt_hash, is_active, max_connections
 		FROM users ORDER BY id`)
 	if err != nil {
 		return nil, err
@@ -144,7 +164,7 @@ func (d *Database) ListUsers() ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.IsActive, &u.MaxConnections)
+		err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.NTHash, &u.IsActive, &u.MaxConnections)
 		if err != nil {
 			return nil, err
 		}

@@ -63,3 +63,4 @@ docker compose --profile debug up -d --build radius-debug
 ```
 
 ### TODO
+- [ ] Вынести session secret key в env
