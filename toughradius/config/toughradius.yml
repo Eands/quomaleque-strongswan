@@ -13,6 +13,11 @@ radiusd:
   host: 0.0.0.0
   auth_port: 1812
   acct_port: 1813
+  debug: true
+
+logger:
+  mode: development
+  file_enable: false
 
 web:
   host: 0.0.0.0
