@@ -18,6 +18,8 @@ COPY scripts/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh && \
     mkdir -p /var/log/freeradius && \
+    chown freerad:adm /var/log/freeradius && \
+    chmod 750 /var/log/freeradius && \
     ln -sf /etc/freeradius/3.0/mods-config/sql/counter/postgresql/max_connections.conf \
            /etc/freeradius/3.0/mods-enabled/max_connections
 

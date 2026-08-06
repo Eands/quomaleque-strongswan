@@ -41,7 +41,7 @@ sql {
 
     read_groups = yes
 
-    logfile = /var/log/freeradius/sqllog.sql
+    logfile = ${logdir}/sqllog.sql
 
     $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
 }
