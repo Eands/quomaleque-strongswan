@@ -1,113 +1,178 @@
-CREATE TABLE IF NOT EXISTS radcheck (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(64) NOT NULL DEFAULT '',
-    attribute VARCHAR(64) NOT NULL DEFAULT '',
-    op CHAR(2) NOT NULL DEFAULT '==',
-    value VARCHAR(253) NOT NULL DEFAULT ''
-);
+/*
+ * $Id$
+ *
+ * PostgreSQL schema for FreeRADIUS
+ *
+ */
 
-CREATE INDEX idx_radcheck_username ON radcheck(username);
-
-CREATE TABLE IF NOT EXISTS radreply (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(64) NOT NULL DEFAULT '',
-    attribute VARCHAR(64) NOT NULL DEFAULT '',
-    op CHAR(2) NOT NULL DEFAULT '=',
-    value VARCHAR(253) NOT NULL DEFAULT ''
-);
-
-CREATE INDEX idx_radreply_username ON radreply(username);
-
-CREATE TABLE IF NOT EXISTS radgroupcheck (
-    id SERIAL PRIMARY KEY,
-    groupname VARCHAR(64) NOT NULL DEFAULT '',
-    attribute VARCHAR(64) NOT NULL DEFAULT '',
-    op CHAR(2) NOT NULL DEFAULT '==',
-    value VARCHAR(253) NOT NULL DEFAULT ''
-);
-
-CREATE INDEX idx_radgroupcheck_groupname ON radgroupcheck(groupname);
-
-CREATE TABLE IF NOT EXISTS radgroupreply (
-    id SERIAL PRIMARY KEY,
-    groupname VARCHAR(64) NOT NULL DEFAULT '',
-    attribute VARCHAR(64) NOT NULL DEFAULT '',
-    op CHAR(2) NOT NULL DEFAULT '=',
-    value VARCHAR(253) NOT NULL DEFAULT ''
-);
-
-CREATE INDEX idx_radgroupreply_groupname ON radgroupreply(groupname);
-
-CREATE TABLE IF NOT EXISTS radusergroup (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(64) NOT NULL DEFAULT '',
-    groupname VARCHAR(64) NOT NULL DEFAULT '',
-    priority INTEGER NOT NULL DEFAULT 1
-);
-
-CREATE INDEX idx_radusergroup_username ON radusergroup(username);
-
+/*
+ * Table structure for table 'radacct'
+ *
+ */
 CREATE TABLE IF NOT EXISTS radacct (
-    radacctid BIGSERIAL PRIMARY KEY,
-    acctsessionid VARCHAR(64) NOT NULL DEFAULT '',
-    acctuniqueid VARCHAR(32) NOT NULL DEFAULT '',
-    username VARCHAR(64) NOT NULL DEFAULT '',
-    groupname VARCHAR(64) NOT NULL DEFAULT '',
-    realm VARCHAR(64) NOT NULL DEFAULT '',
-    nasipaddress INET NOT NULL,
-    nasportid VARCHAR(15) NOT NULL DEFAULT '',
-    nasporttype VARCHAR(32) NOT NULL DEFAULT '',
-    acctstarttime TIMESTAMP WITH TIME ZONE,
-    acctupdatetime TIMESTAMP WITH TIME ZONE,
-    acctstoptime TIMESTAMP WITH TIME ZONE,
-    acctinterval INTEGER DEFAULT NULL,
-    acctsessiontime INTEGER DEFAULT NULL,
-    acctauthentic VARCHAR(32) NOT NULL DEFAULT '',
-    connectinfo_start VARCHAR(50) NOT NULL DEFAULT '',
-    connectinfo_stop VARCHAR(50) NOT NULL DEFAULT '',
-    acctinputoctets BIGINT DEFAULT NULL,
-    acctoutputoctets BIGINT DEFAULT NULL,
-    calledstationid VARCHAR(50) NOT NULL DEFAULT '',
-    callingstationid VARCHAR(50) NOT NULL DEFAULT '',
-    acctterminatecause VARCHAR(32) NOT NULL DEFAULT '',
-    servicetype VARCHAR(32) NOT NULL DEFAULT '',
-    framedprotocol VARCHAR(32) NOT NULL DEFAULT '',
-    framedipaddress INET,
-    framedipv6address INET,
-    framedipv6prefix INET,
-    framedinterfaceid VARCHAR(44) NOT NULL DEFAULT '',
-    delegatedipv6prefix INET
+	RadAcctId		bigserial PRIMARY KEY,
+	AcctSessionId		text NOT NULL,
+	AcctUniqueId		text NOT NULL UNIQUE,
+	UserName		text,
+	Realm			text,
+	NASIPAddress		inet NOT NULL,
+	NASPortId		text,
+	NASPortType		text,
+	AcctStartTime		timestamp with time zone,
+	AcctUpdateTime		timestamp with time zone,
+	AcctStopTime		timestamp with time zone,
+	AcctInterval		bigint,
+	AcctSessionTime		bigint,
+	AcctAuthentic		text,
+	ConnectInfo_start	text,
+	ConnectInfo_stop	text,
+	AcctInputOctets		bigint,
+	AcctOutputOctets	bigint,
+	CalledStationId		text,
+	CallingStationId	text,
+	AcctTerminateCause	text,
+	ServiceType		text,
+	FramedProtocol		text,
+	FramedIPAddress		inet,
+	FramedIPv6Address	inet,
+	FramedIPv6Prefix	inet,
+	FramedInterfaceId	text,
+	DelegatedIPv6Prefix	inet,
+	Class			text
 );
+-- This index may be useful..
+-- CREATE UNIQUE INDEX radacct_whoson on radacct (AcctStartTime, nasipaddress);
 
-CREATE INDEX idx_radacct_username ON radacct(username);
-CREATE INDEX idx_radacct_acctsessionid ON radacct(acctsessionid);
-CREATE INDEX idx_radacct_acctuniqueid ON radacct(acctuniqueid);
-CREATE INDEX idx_radacct_acctstarttime ON radacct(acctstarttime);
-CREATE INDEX idx_radacct_acctstoptime ON radacct(acctstoptime);
-CREATE INDEX idx_radacct_nasipaddress ON radacct(nasipaddress);
-CREATE INDEX idx_radacct_framedipaddress ON radacct(framedipaddress);
+-- For use by update-, stop- and simul_* queries
+CREATE INDEX radacct_active_session_idx ON radacct (AcctUniqueId) WHERE AcctStopTime IS NULL;
+
+-- Add if you you regularly have to replay packets
+-- CREATE INDEX radacct_session_idx ON radacct (AcctUniqueId);
+
+-- For backwards compatibility
+-- CREATE INDEX radacct_active_user_idx ON radacct (AcctSessionId, UserName, NASIPAddress) WHERE AcctStopTime IS NULL;
+
+-- For use by onoff-
+CREATE INDEX radacct_bulk_close ON radacct (NASIPAddress, AcctStartTime) WHERE AcctStopTime IS NULL;
+
+-- and for common statistic queries:
+CREATE INDEX radacct_start_user_idx ON radacct (AcctStartTime, UserName);
+
+-- and, optionally
+-- CREATE INDEX radacct_stop_user_idx ON radacct (acctStopTime, UserName);
+
+-- and for Class
+CREATE INDEX radacct_calss_idx ON radacct (Class);
+
+
+/*
+ * Table structure for table 'radcheck'
+ */
+CREATE TABLE IF NOT EXISTS radcheck (
+	id			serial PRIMARY KEY,
+	UserName		text NOT NULL DEFAULT '',
+	Attribute		text NOT NULL DEFAULT '',
+	op			VARCHAR(2) NOT NULL DEFAULT '==',
+	Value			text NOT NULL DEFAULT ''
+);
+create index radcheck_UserName on radcheck (UserName,Attribute);
+/*
+ * Use this index if you use case insensitive queries
+ */
+-- create index radcheck_UserName_lower on radcheck (lower(UserName),Attribute);
+
+/*
+ * Table structure for table 'radgroupcheck'
+ */
+CREATE TABLE IF NOT EXISTS radgroupcheck (
+	id			serial PRIMARY KEY,
+	GroupName		text NOT NULL DEFAULT '',
+	Attribute		text NOT NULL DEFAULT '',
+	op			VARCHAR(2) NOT NULL DEFAULT '==',
+	Value			text NOT NULL DEFAULT ''
+);
+create index radgroupcheck_GroupName on radgroupcheck (GroupName,Attribute);
+
+/*
+ * Table structure for table 'radgroupreply'
+ */
+CREATE TABLE IF NOT EXISTS radgroupreply (
+	id			serial PRIMARY KEY,
+	GroupName		text NOT NULL DEFAULT '',
+	Attribute		text NOT NULL DEFAULT '',
+	op			VARCHAR(2) NOT NULL DEFAULT '=',
+	Value			text NOT NULL DEFAULT ''
+);
+create index radgroupreply_GroupName on radgroupreply (GroupName,Attribute);
+
+/*
+ * Table structure for table 'radreply'
+ */
+CREATE TABLE IF NOT EXISTS radreply (
+	id			serial PRIMARY KEY,
+	UserName		text NOT NULL DEFAULT '',
+	Attribute		text NOT NULL DEFAULT '',
+	op			VARCHAR(2) NOT NULL DEFAULT '=',
+	Value			text NOT NULL DEFAULT ''
+);
+create index radreply_UserName on radreply (UserName,Attribute);
+/*
+ * Use this index if you use case insensitive queries
+ */
+-- create index radreply_UserName_lower on radreply (lower(UserName),Attribute);
+
+/*
+ * Table structure for table 'radusergroup'
+ */
+CREATE TABLE IF NOT EXISTS radusergroup (
+	id			serial PRIMARY KEY,
+	UserName		text NOT NULL DEFAULT '',
+	GroupName		text NOT NULL DEFAULT '',
+	priority		integer NOT NULL DEFAULT 0
+);
+create index radusergroup_UserName on radusergroup (UserName);
+/*
+ * Use this index if you use case insensitive queries
+ */
+-- create index radusergroup_UserName_lower on radusergroup (lower(UserName));
+
+--
+-- Table structure for table 'radpostauth'
+--
 
 CREATE TABLE IF NOT EXISTS radpostauth (
-    id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(64) NOT NULL DEFAULT '',
-    pass VARCHAR(64) NOT NULL DEFAULT '',
-    reply VARCHAR(32) NOT NULL DEFAULT '',
-    authdate TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+	id			bigserial PRIMARY KEY,
+	username		text NOT NULL,
+	pass			text,
+	reply			text,
+	CalledStationId		text,
+	CallingStationId	text,
+	authdate		timestamp with time zone NOT NULL default now(),
+	Class			text
 );
+CREATE INDEX radpostauth_username_idx ON radpostauth (username);
+CREATE INDEX radpostauth_class_idx ON radpostauth (Class);
 
-CREATE INDEX idx_radpostauth_username ON radpostauth(username);
-CREATE INDEX idx_radpostauth_authdate ON radpostauth(authdate);
-
+/*
+ * Table structure for table 'nas'
+ */
 CREATE TABLE IF NOT EXISTS nas (
-    id SERIAL PRIMARY KEY,
-    nasname VARCHAR(128) NOT NULL,
-    shortname VARCHAR(32) NOT NULL DEFAULT '',
-    type VARCHAR(30) NOT NULL DEFAULT 'other',
-    ports INTEGER NOT NULL DEFAULT 0,
-    secret VARCHAR(60) NOT NULL DEFAULT 'secret',
-    server VARCHAR(64) NOT NULL DEFAULT '',
-    community VARCHAR(50) NOT NULL DEFAULT '',
-    description VARCHAR(200) NOT NULL DEFAULT ''
+	id			serial PRIMARY KEY,
+	nasname			text NOT NULL,
+	shortname		text NOT NULL,
+	type			text NOT NULL DEFAULT 'other',
+	ports			integer,
+	secret			text NOT NULL,
+	server			text,
+	community		text,
+	description		text
 );
+create index nas_nasname on nas (nasname);
 
-CREATE INDEX idx_nas_nasname ON nas(nasname);
+/*
+ * Table structure for table 'nasreload'
+ */
+CREATE TABLE IF NOT EXISTS nasreload (
+	NASIPAddress		inet PRIMARY KEY,
+	ReloadTime		timestamp with time zone NOT NULL
+);
