@@ -1,0 +1,31 @@
+{{template "_header.html" .}}
+<h2>RADIUS Users</h2>
+<p><a href="/users/create"><button>Add User</button></a></p>
+{{if .users}}
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Group</th>
+            <th>Max Connections</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .users}}
+        <tr>
+            <td>{{.Username}}</td>
+            <td>{{if .Group}}{{.Group}}{{else}}&mdash;{{end}}</td>
+            <td>{{if .SimultaneousUse}}{{.SimultaneousUse}}{{else}}Unlimited{{end}}</td>
+            <td>
+                <a href="/users/{{.Username}}/edit">Edit</a>
+                <a href="/users/{{.Username}}/delete" onclick="return confirm('Delete user {{.Username}}?')" style="color: var(--pico-del-color)">Delete</a>
+            </td>
+        </tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>No users found. <a href="/users/create">Create one</a>.</p>
+{{end}}
+{{template "_footer.html" .}}

@@ -1,0 +1,23 @@
+{{template "_header.html" .}}
+<h2>Create User</h2>
+<form method="post" action="/users/create">
+    <label>
+        Username
+        <input type="text" name="username" required autofocus>
+    </label>
+    <label>
+        Password
+        <input type="password" name="password" required>
+    </label>
+    <label>
+        Group (optional)
+        <input type="text" name="group">
+    </label>
+    <label>
+        Max Connections (0 = unlimited)
+        <input type="number" name="max_connections" value="1" min="0">
+    </label>
+    <button type="submit">Create</button>
+    <a href="/users" role="button" class="secondary" style="margin-left: 0.5rem;">Cancel</a>
+</form>
+{{template "_footer.html" .}}

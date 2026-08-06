@@ -1,0 +1,52 @@
+server default {
+    listen {
+        type = auth
+        ipaddr = *
+        port = 0
+    }
+    listen {
+        type = acct
+        ipaddr = *
+        port = 0
+    }
+
+    authorize {
+        filter_username
+        preprocess
+        suffix
+        files
+        sql
+        max_connections
+        eap {
+            ok = return
+            updated = return
+            reject = return
+        }
+    }
+
+    authenticate {
+        mschap
+        eap
+    }
+
+    preacct {
+        preprocess
+        acct_unique
+        suffix
+        files
+    }
+
+    accounting {
+        sql
+        exec
+    }
+
+    session {
+        sql
+    }
+
+    post-auth {
+        sql
+        exec
+    }
+}

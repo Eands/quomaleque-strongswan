@@ -1,0 +1,19 @@
+{{template "_header.html" .}}
+<h2>Edit User: {{.user.Username}}</h2>
+<form method="post" action="/users/{{.user.Username}}/edit">
+    <label>
+        New Password (leave empty to keep current)
+        <input type="password" name="password">
+    </label>
+    <label>
+        Group
+        <input type="text" name="group" value="{{.user.Group}}">
+    </label>
+    <label>
+        Max Connections (0 = unlimited)
+        <input type="number" name="max_connections" value="{{.user.SimultaneousUse}}" min="0">
+    </label>
+    <button type="submit">Save</button>
+    <a href="/users" role="button" class="secondary" style="margin-left: 0.5rem;">Cancel</a>
+</form>
+{{template "_footer.html" .}}

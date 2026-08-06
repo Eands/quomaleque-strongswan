@@ -1,0 +1,12 @@
+eap {
+    default_eap_type = mschapv2
+    timer_expire = 60
+    ignore_unknown_eap_types = no
+    cisco_accounting_username_bug = no
+    max_sessions = 4096
+
+    mschapv2 {
+        send_error = yes
+        identity = "FreeRADIUS"
+    }
+}

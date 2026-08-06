@@ -1,67 +1,115 @@
-volumes:
-  vici_socket:
-
 services:
-  strongswan:
-    build:
-      context: ./strongswan
-      dockerfile: Dockerfile
-    container_name: strongswan
-    cap_add:
-      - NET_ADMIN
-    network_mode: host
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
-      - vici_socket:/var/run
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+# todo remove dev stub
+    ports:
+      - "5432:5432"
+    networks:
+      - vpn-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   radius:
     build:
-      context: ./radius
-      dockerfile: Dockerfile
-    container_name: vpn-radius
-    network_mode: host
-    depends_on:
-      strongswan:
-        condition: service_started
+      context: ./freeradius
+    container_name: radius
     environment:
-      - DB_PATH=/data/users.db
-      - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
-    volumes:
-      - ./data:/data
-      - vici_socket:/var/run
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      RADIUS_SECRET: ${RADIUS_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    networks:
+      - vpn-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/login"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
 
-  radius-debug:
-    profiles: [debug]
+  strongswan:
     build:
-      context: ./radius
-      dockerfile: Dockerfile
-      target: debug
-    container_name: vpn-radius-debug
-    network_mode: host
+      context: ./strongswan
+    container_name: strongswan
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      RADIUS_SECRET: ${RADIUS_SECRET}
+      STRONGSWAN_IPSEC_POOL_START: ${STRONGSWAN_IPSEC_POOL_START}
+      STRONGSWAN_IPSEC_POOL_END: ${STRONGSWAN_IPSEC_POOL_END}
+      STRONGSWAN_DNS: ${STRONGSWAN_DNS}
     depends_on:
+      radius:
+        condition: service_started
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    volumes:
+      - strongswan_certs:/etc/ipsec.d/certs
+      - strongswan_private:/etc/ipsec.d/private
+      - strongswan_cacerts:/etc/ipsec.d/cacerts
+    networks:
+      - vpn-net
+    restart: unless-stopped
+
+  webapp:
+    build:
+      context: ./webapp
+    container_name: webapp
+    environment:
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      RADIUS_SECRET: ${RADIUS_SECRET}
+      STRONGSWAN_VICI_ADDR: ${STRONGSWAN_VICI_ADDR}
+      VICI_CONNECT_TIMEOUT: ${VICI_CONNECT_TIMEOUT}
+      VICI_RECONNECT_INTERVAL: ${VICI_RECONNECT_INTERVAL}
+      HTTPS_PORT: ${HTTPS_PORT}
+      SSL_CERT_PATH: ${SSL_CERT_PATH}
+      SSL_KEY_PATH: ${SSL_KEY_PATH}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS}
+      APP_USER: ${APP_USER}
+      APP_PASSWORD: ${APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
       strongswan:
         condition: service_started
-    environment:
-      - DB_PATH=/data/users.db
-      - RADIUS_SECRET=${RADIUS_SECRET:-HpE98gAFA4OaJaHYU46M}
+    ports:
+      - "443:443"
+      - "80:80"
     volumes:
-      - ./data:/data
-      - vici_socket:/var/run
-    command: >
-      dlv exec /app/vpn-radius
-        --headless --listen=:2345 --api-version=2
-        --accept-multiclient --continue
+      - webapp_certs:/certs
+    networks:
+      - vpn-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/login"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+
+volumes:
+  postgres_data:
+  strongswan_certs:
+  strongswan_private:
+  strongswan_cacerts:
+  webapp_certs:
+
+networks:
+  vpn-net:
+    driver: bridge

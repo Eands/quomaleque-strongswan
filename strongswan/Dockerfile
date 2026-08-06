@@ -1,25 +1,27 @@
-FROM ubuntu:24.04
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     strongswan \
     strongswan-swanctl \
     libcharon-extra-plugins \
     libstrongswan-extra-plugins \
+    socat \
     iptables \
+    ca-certificates \
+    tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
-RUN echo "hosts: files dns" > /etc/nsswitch.conf
+RUN mkdir -p /etc/ipsec.d/certs /etc/ipsec.d/private /etc/ipsec.d/cacerts
 
-RUN mkdir -p /etc/swanctl/x509 \
-    /etc/swanctl/x509ca \
-    /etc/swanctl/private
+COPY ipsec.conf /etc/ipsec.conf
+COPY strongswan.conf /etc/strongswan.conf
+COPY ipsec.secrets /etc/ipsec.secrets
+COPY scripts/entrypoint.sh /entrypoint.sh
 
-COPY config/strongswan.conf /etc/strongswan.conf
-COPY config/swanctl/ /etc/swanctl/
-COPY startup.sh /
-
-RUN chmod +x /startup.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 500/udp 4500/udp
 
-ENTRYPOINT ["/startup.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

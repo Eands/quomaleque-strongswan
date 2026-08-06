@@ -1,0 +1,36 @@
+{{template "_header.html" .}}
+<h2>Active VPN Sessions</h2>
+{{if .sessions}}
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Remote IP</th>
+            <th>Virtual IP</th>
+            <th>State</th>
+            <th>IKE</th>
+            <th>Connected Since</th>
+            <th>Bytes In</th>
+            <th>Bytes Out</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .sessions}}
+        <tr>
+            <td>{{.Username}}</td>
+            <td>{{.RemoteIP}}</td>
+            <td>{{.VirtualIP}}</td>
+            <td>{{.State}}</td>
+            <td>v{{.IKEVersion}}</td>
+            <td>{{.StartTime}}</td>
+            <td class="num">{{.BytesIn}}</td>
+            <td class="num">{{.BytesOut}}</td>
+        </tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>No active VPN sessions.</p>
+{{end}}
+<p><small>Data refreshes automatically when sessions change.</small></p>
+{{template "_footer.html" .}}

@@ -1,0 +1,16 @@
+{{template "_header.html" .}}
+<article style="max-width: 400px; margin: 2rem auto;">
+    <h2>VPN Management</h2>
+    <form method="post" action="/login">
+        <label>
+            Username
+            <input type="text" name="username" required autofocus>
+        </label>
+        <label>
+            Password
+            <input type="password" name="password" required>
+        </label>
+        <button type="submit">Login</button>
+    </form>
+</article>
+{{template "_footer.html" .}}

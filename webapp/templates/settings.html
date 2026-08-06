@@ -1,0 +1,11 @@
+{{template "_header.html" .}}
+<h2>Settings</h2>
+<form method="post" action="/settings">
+    <label>
+        Log Retention (days)
+        <input type="number" name="log_retention_days" value="{{.log_retention_days}}" min="1" required>
+        <small>Accounting log entries older than this will be automatically deleted.</small>
+    </label>
+    <button type="submit">Save Settings</button>
+</form>
+{{template "_footer.html" .}}
