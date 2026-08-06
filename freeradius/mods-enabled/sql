@@ -36,4 +36,6 @@ sql {
     read_clients = no
 
     read_groups = yes
+
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
 }

@@ -9,6 +9,9 @@ services:
     volumes:
       - ./postgres/init:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
+# todo remove dev stub
+    ports:
+      - "5432:5432"
     networks:
       - vpn-net
     restart: unless-stopped
