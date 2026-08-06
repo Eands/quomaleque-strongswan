@@ -19,11 +19,11 @@ wait_for_postgres
 
 echo "PostgreSQL is ready"
 
-sed -i "s|@@DB_HOST@@|${DB_HOST}|g" /etc/raddb/mods-enabled/sql
-sed -i "s|@@DB_PORT@@|${DB_PORT}|g" /etc/raddb/mods-enabled/sql
-sed -i "s|@@DB_USER@@|${DB_USER}|g" /etc/raddb/mods-enabled/sql
-sed -i "s|@@DB_PASSWORD@@|${DB_PASSWORD}|g" /etc/raddb/mods-enabled/sql
-sed -i "s|@@DB_NAME@@|${DB_NAME}|g" /etc/raddb/mods-enabled/sql
-sed -i "s|@@RADIUS_SECRET@@|${RADIUS_SECRET}|g" /etc/raddb/clients.conf
+sed -i "s|@@DB_HOST@@|${DB_HOST}|g" /etc/freeradius/3.0/mods-enabled/sql
+sed -i "s|@@DB_PORT@@|${DB_PORT}|g" /etc/freeradius/3.0/mods-enabled/sql
+sed -i "s|@@DB_USER@@|${DB_USER}|g" /etc/freeradius/3.0/mods-enabled/sql
+sed -i "s|@@DB_PASSWORD@@|${DB_PASSWORD}|g" /etc/freeradius/3.0/mods-enabled/sql
+sed -i "s|@@DB_NAME@@|${DB_NAME}|g" /etc/freeradius/3.0/mods-enabled/sql
+sed -i "s|@@RADIUS_SECRET@@|${RADIUS_SECRET}|g" /etc/freeradius/3.0/clients.conf
 
 exec freeradius -f -l stdout
