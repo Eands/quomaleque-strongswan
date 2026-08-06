@@ -1,0 +1,8 @@
+.env
+ca-cert.pem
+*.pem
+.DS_Store
+.idea/
+promt.md
+
+webapp/webapp

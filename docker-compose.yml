@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vpn-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  radius:
+    build:
+      context: ./freeradius
+    container_name: radius
+    environment:
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      RADIUS_SECRET: ${RADIUS_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    networks:
+      - vpn-net
+    restart: unless-stopped
+
+  strongswan:
+    build:
+      context: ./strongswan
+    container_name: strongswan
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      RADIUS_SECRET: ${RADIUS_SECRET}
+      STRONGSWAN_IPSEC_POOL_START: ${STRONGSWAN_IPSEC_POOL_START}
+      STRONGSWAN_IPSEC_POOL_END: ${STRONGSWAN_IPSEC_POOL_END}
+      STRONGSWAN_DNS: ${STRONGSWAN_DNS}
+    depends_on:
+      radius:
+        condition: service_started
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    volumes:
+      - strongswan_certs:/etc/ipsec.d/certs
+      - strongswan_private:/etc/ipsec.d/private
+      - strongswan_cacerts:/etc/ipsec.d/cacerts
+    networks:
+      - vpn-net
+    restart: unless-stopped
+
+  webapp:
+    build:
+      context: ./webapp
+    container_name: webapp
+    environment:
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      RADIUS_SECRET: ${RADIUS_SECRET}
+      STRONGSWAN_VICI_ADDR: ${STRONGSWAN_VICI_ADDR}
+      VICI_CONNECT_TIMEOUT: ${VICI_CONNECT_TIMEOUT}
+      VICI_RECONNECT_INTERVAL: ${VICI_RECONNECT_INTERVAL}
+      HTTPS_PORT: ${HTTPS_PORT}
+      SSL_CERT_PATH: ${SSL_CERT_PATH}
+      SSL_KEY_PATH: ${SSL_KEY_PATH}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS}
+      APP_USER: ${APP_USER}
+      APP_PASSWORD: ${APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      strongswan:
+        condition: service_started
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - webapp_certs:/certs
+    networks:
+      - vpn-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  strongswan_certs:
+  strongswan_private:
+  strongswan_cacerts:
+  webapp_certs:
+
+networks:
+  vpn-net:
+    driver: bridge

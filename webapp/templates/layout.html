@@ -1,0 +1,57 @@
+{{define "_header.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        :root { --pico-font-size: 95%; }
+        .container { max-width: 1100px; }
+        .flash-error {
+            color: var(--pico-del-color);
+            background: var(--pico-del-background);
+            padding: 0.5rem 1rem;
+            border-radius: var(--pico-border-radius);
+            margin-bottom: 1rem;
+        }
+        .flash-success {
+            color: var(--pico-ins-color);
+            background: var(--pico-ins-background);
+            padding: 0.5rem 1rem;
+            border-radius: var(--pico-border-radius);
+            margin-bottom: 1rem;
+        }
+        nav a.active { font-weight: bold; text-decoration: underline; }
+        .num { font-family: monospace; }
+        table { font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header class="container">
+        <nav>
+            <ul><li><strong>VPN Management</strong></li></ul>
+            <ul>
+                {{if .LoggedIn}}
+                <li><a href="/" class="{{if eq .ActivePage "dashboard"}}active{{end}}">Dashboard</a></li>
+                <li><a href="/users" class="{{if eq .ActivePage "users"}}active{{end}}">Users</a></li>
+                <li><a href="/monitor" class="{{if eq .ActivePage "monitor"}}active{{end}}">Monitor</a></li>
+                <li><a href="/settings" class="{{if eq .ActivePage "settings"}}active{{end}}">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+                {{end}}
+            </ul>
+        </nav>
+    </header>
+    <main class="container">
+        {{if .error}}<div class="flash-error">{{.error}}</div>{{end}}
+        {{if .success}}<div class="flash-success">{{.success}}</div>{{end}}
+{{end}}
+{{define "_footer.html"}}
+    </main>
+    <footer class="container" style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
+        <small>VPN Management &mdash; strongSwan + FreeRADIUS</small>
+    </footer>
+</body>
+</html>
+{{end}}
