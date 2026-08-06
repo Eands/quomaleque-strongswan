@@ -302,12 +302,17 @@ func buildCommand(name string, msg []byte) []byte {
 
 func buildRegisterEvent(eventName string) []byte {
 	var msgBuf bytes.Buffer
-	msgBuf.WriteByte(etSectionStart)
-	writeStringField(&msgBuf, "event")
-	writeStringField(&msgBuf, eventName)
-	msgBuf.WriteByte(etSectionEnd)
+	writeStringFieldKV(&msgBuf, "event", eventName)
 
 	return buildCommand("register-event", msgBuf.Bytes())
+}
+
+func writeStringFieldKV(w io.Writer, key, value string) {
+	w.Write([]byte{etKeyValue})
+	binary.Write(w, binary.BigEndian, uint16(len(key)))
+	w.Write([]byte(key))
+	binary.Write(w, binary.BigEndian, uint16(len(value)))
+	w.Write([]byte(value))
 }
 
 type ViciSection struct {

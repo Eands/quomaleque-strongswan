@@ -13,14 +13,11 @@ RUN apt-get update && apt-get install -y \
     tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /etc/ipsec.d/certs /etc/ipsec.d/private /etc/ipsec.d/cacerts \
-    /etc/strongswan.d/charon
+RUN mkdir -p /etc/ipsec.d/certs /etc/ipsec.d/private /etc/ipsec.d/cacerts
 
 COPY ipsec.conf /etc/ipsec.conf
 COPY strongswan.conf /etc/strongswan.conf
 COPY ipsec.secrets /etc/ipsec.secrets
-COPY strongswan.d/charon/eap-radius.conf /etc/strongswan.d/charon/eap-radius.conf
-COPY strongswan.d/charon/vici.conf /etc/strongswan.d/charon/vici.conf
 COPY scripts/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
