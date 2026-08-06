@@ -26,4 +26,4 @@ sed -i "s|@@DB_PASSWORD@@|${DB_PASSWORD}|g" /etc/freeradius/3.0/mods-enabled/sql
 sed -i "s|@@DB_NAME@@|${DB_NAME}|g" /etc/freeradius/3.0/mods-enabled/sql
 sed -i "s|@@RADIUS_SECRET@@|${RADIUS_SECRET}|g" /etc/freeradius/3.0/clients.conf
 
-exec freeradius -f -l stdout
+exec freeradius -X
